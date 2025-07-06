@@ -108,27 +108,17 @@ def cadastro(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
-    print("\n--- [DEBUG] 1. REQUISIÇÃO RECEBIDA NA VIEW LOGIN ---")
-
     email = request.data.get('email')
     senha_fornecida = request.data.get('senha')
-    print(f"--- [DEBUG] 2. Dados recebidos: EMAIL={email}, SENHA=[OCULTA] ---")
-
     if not email or not senha_fornecida:
-        print("--- [DEBUG] ERRO: Campos obrigatórios ausentes. ---")
         return Response(
             {'erro': 'Email e senha são obrigatórios.'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    print("--- [DEBUG] 3. Chamando django.contrib.auth.authenticate... ---")
-    
     usuario = authenticate(request, username=email, password=senha_fornecida)
-    
-    print(f"--- [DEBUG] 4. Resultado do authenticate: {usuario} ---")
 
     if usuario is not None:
-        print("--- [DEBUG] 5. Autenticação BEM-SUCEDIDA. Gerando tokens... ---")
         refresh = RefreshToken.for_user(usuario)
 
         user_data_response = {
@@ -150,7 +140,6 @@ def login(request):
             status=status.HTTP_200_OK,
         )
     else:
-        print("--- [DEBUG] 6. FALHA na autenticação. 'authenticate' retornou None. ---")
         return Response(
             {'erro': 'Credenciais inválidas.'},
             status=status.HTTP_401_UNAUTHORIZED
