@@ -28,7 +28,7 @@ class QuestaoSerializer(serializers.ModelSerializer):
 
 class ExameSerializer(serializers.ModelSerializer):
     questoes = QuestaoSerializer(many=True, read_only=True)
-    estado = serializers.CharField(source='estado', read_only=True)
+    estado = serializers.CharField(read_only=True)
 
     class Meta:
         model = Exame

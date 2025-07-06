@@ -18,6 +18,9 @@ class ExameViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Exame.objects.none()
+
         user = self.request.user
         if user.tipo == Usuario.Tipo.PROFESSOR:
             return Exame.objects.filter(professor__usuario=user).select_related(
@@ -101,6 +104,9 @@ class RespostaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Exame.objects.none()
+
         user = self.request.user
         exame_id = self.kwargs.get('exame_pk')
 
@@ -150,6 +156,9 @@ class CorrecaoViewSet(viewsets.ModelViewSet):
     )
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Exame.objects.none()
+
         if self.request.user.tipo == Usuario.Tipo.PROFESSOR:
             return self.queryset.filter(questao__exame__professor__usuario=self.request.user)
         return Resposta.objects.none()
@@ -174,6 +183,9 @@ class NotaCompostaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Exame.objects.none()
+
         user = self.request.user
         if user.tipo == Usuario.Tipo.PROFESSOR:
             return NotaComposta.objects.filter(

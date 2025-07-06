@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 @csrf_exempt
-@require_http_methods(['POST'])
+@api_view(['POST'])
 def cadastro(request):
     try:
         data = json.loads(request.body)
@@ -149,7 +149,7 @@ def login(request):
 # Criando uma função para retornar as informações do professor em uma rota
 
 
-@require_http_methods(['GET'])
+@api_view(['GET'])
 def info_perfil_prof(request, id):
     try:
         professor = Professor.objects.get(usuario_id=id)
@@ -197,7 +197,7 @@ def listar_turmas_prof(request, id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 # Função para mostrar os casos do professor
-@require_http_methods(['GET'])
+@api_view(['GET'])
 def listar_casos_prof(request, id):
     try:
         professor = Professor.objects.get(usuario_id=id)
@@ -218,7 +218,7 @@ def listar_casos_prof(request, id):
 
 # Funções para casos
 # Função para expor detalhes dos casos
-@require_http_methods(['GET'])
+@api_view(['GET'])
 def info_casos(request, prof_id, caso_id):
     try:
         caso = CasoClinico.objects.get(id=caso_id)
@@ -246,7 +246,7 @@ def info_casos(request, prof_id, caso_id):
 
 
 # Funções para turmas
-@require_http_methods(['GET'])
+@api_view(['GET'])
 def info_turmas(request, id):
     try:
         turma = Turma.objects.get(id=id)
