@@ -11,6 +11,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from .serializers import TurmaSerializer
 
 @csrf_exempt
 @require_http_methods(['POST'])
@@ -246,34 +247,16 @@ def info_casos(request, prof_id, caso_id):
 
 
 # Funções para turmas
-@require_http_methods(['GET'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def info_turmas(request, id):
     try:
-        turma = Turma.objects.get(id=id)
-        alunos = turma.alunos_matriculados.all()
-        lista_alunos = []
-        for aluno in alunos:
-            lista_alunos.append(
-                {
-                    'nome': f'{aluno.usuario.first_name} {aluno.usuario.last_name}',
-                    'matricula': aluno.matricula,
-                }
-            )
-
-        dados = {
-            'id': turma.id,
-            'disciplina': turma.disciplina,
-            'semestre': turma.semestre,
-            'capacidade máxima': turma.capacidade_maxima,
-            'quantidade de alunos': turma.quantidade_alunos,
-            'professor': turma.professor_responsavel.usuario.first_name,
-            'alunos': lista_alunos,
-        }
-
-        return JsonResponse(dados)
+        turma = Turma.objects.select_related('professor_responsavel__usuario').prefetch_related('alunos_matriculados__usuario').get(id=id)
+        serializer = TurmaSerializer(turma)
+        return Response(serializer.data)
 
     except Turma.DoesNotExist:
-        raise Http404('Turma não encontrada.')
-
-    except Exception as e:
-        return JsonResponse({'erro': f'Ocorreu um erro inesperado: {str(e)}'}, status=500)
+        return Response(
+            {'erro': 'Turma não encontrada.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
