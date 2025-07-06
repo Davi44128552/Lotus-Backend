@@ -4,9 +4,13 @@ from django.contrib.auth import authenticate
 from django.http import Http404, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Aluno, CasoClinico, Diagnostico, Professor, Turma, Usuario
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 
 @csrf_exempt
 @require_http_methods(['POST'])
@@ -101,45 +105,45 @@ def cadastro(request):
         return JsonResponse({'erro': f'Ocorreu um erro inesperado: {str(e)}'}, status=500)
 
 
-@csrf_exempt
-@require_http_methods(['POST'])
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def login(request):
-    try:
-        data = json.loads(request.body)
-        email = data.get('email')
-        senha_fornecida = data.get('senha')
+    email = request.data.get('email')
+    senha_fornecida = request.data.get('senha')
+    if not email or not senha_fornecida:
+        return Response(
+            {'erro': 'Email e senha são obrigatórios.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-        if not email or not senha_fornecida:
-            return JsonResponse({'erro': 'Email e senha são obrigatórios.'}, status=400)
+    usuario = authenticate(request, username=email, password=senha_fornecida)
 
-        usuario = authenticate(request, username=email, password=senha_fornecida)
+    if usuario is not None:
+        refresh = RefreshToken.for_user(usuario)
 
-        if usuario is not None:
-            user_data_response = {
-                'id': usuario.id,
-                'first_name': usuario.first_name,
-                'last_name': usuario.last_name,
-                'email': usuario.email,
-            }
+        user_data_response = {
+            'id': usuario.id,
+            'first_name': usuario.first_name,
+            'last_name': usuario.last_name,
+            'email': usuario.email,
+            'username': usuario.username,
+            'tipo': usuario.tipo,
+        }
 
-            return JsonResponse(
-                {
-                    'mensagem': 'Login bem-sucedido!',
-                    'usuario': user_data_response,
-                    # TODO: Token seria retornado aqui
-                },
-                status=200,
-            )
-        else:
-            # Senha incorreta
-            return JsonResponse({'erro': 'Credenciais inválidas.'}, status=401)
-
-    except json.JSONDecodeError:
-        return JsonResponse({'erro': 'Dados JSON inválidos.'}, status=400)
-    except Exception as e:
-        return JsonResponse({'erro': f'Ocorreu um erro inesperado: {str(e)}'}, status=500)
-
-
+        return Response(
+            {
+                'mensagem': 'Login bem-sucedido!',
+                'usuario': user_data_response,
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            },
+            status=status.HTTP_200_OK,
+        )
+    else:
+        return Response(
+            {'erro': 'Credenciais inválidas.'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
 # Funções para professores
 
 # Criando uma função para retornar as informações do professor em uma rota
@@ -166,11 +170,12 @@ def info_perfil_prof(request, id):
 
 
 # Função para listar as turmas do professor
-@require_http_methods(['GET'])
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def listar_turmas_prof(request, id):
     try:
-        professor = Professor.objects.get(usuario_id=id)
-        turmas = Turma.objects.filter(professor_responsavel=professor)
+        professor_profile = request.user.professor
+        turmas = Turma.objects.filter(professor_responsavel=professor_profile)
 
         turmas_professor = []
         for turma in turmas:
@@ -178,15 +183,19 @@ def listar_turmas_prof(request, id):
                 {'id': turma.id, 'disciplina': turma.disciplina, 'semestre': turma.semestre}
             )
 
-        return JsonResponse(turmas_professor, safe=False)
+        return Response(turmas_professor)
 
     except Professor.DoesNotExist:
-        raise Http404('Professor não encontrado.')
+        return Response(
+            {'erro': 'Perfil de professor não encontrado para este usuário.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
     except Exception as e:
-        return JsonResponse({'erro': f'Ocorreu um erro inesperado: {str(e)}'}, status=500)
-
-
+        return Response(
+            {'erro': f'Ocorreu um erro inesperado: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 # Função para mostrar os casos do professor
 @require_http_methods(['GET'])
 def listar_casos_prof(request, id):
