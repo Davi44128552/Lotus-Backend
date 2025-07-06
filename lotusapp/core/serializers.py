@@ -9,6 +9,9 @@ from .models import (
     Questao,
     Resposta,
     ResultadoNotaComposta,
+    Turma,
+    Aluno,
+    Professor
 )
 
 
@@ -96,3 +99,27 @@ class ResultadoNotaCompostaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResultadoNotaComposta
         fields = ['id', 'nota_composta', 'valor', 'data_calculo']
+
+class AlunoTurmaSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='usuario.id', read_only=True)
+    nome = serializers.CharField(source='usuario.get_full_name', read_only=True)
+    
+    class Meta:
+        model = Aluno
+        fields = ['id', 'nome', 'matricula']
+
+class TurmaSerializer(serializers.ModelSerializer):
+    professor = serializers.CharField(source='professor_responsavel.usuario.get_full_name', read_only=True)
+    alunos = AlunoTurmaSerializer(source='alunos_matriculados', many=True, read_only=True)
+
+    class Meta:
+        model = Turma
+        fields = [
+            'id',
+            'disciplina',
+            'semestre',
+            'capacidade_maxima',
+            'quantidade_alunos',
+            'professor',
+            'alunos'
+        ]
