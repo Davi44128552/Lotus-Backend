@@ -11,7 +11,8 @@ from .models import (
     ResultadoNotaComposta,
     Turma,
     Aluno,
-    Professor
+    Professor,
+    Equipe,
 )
 
 
@@ -122,4 +123,24 @@ class TurmaSerializer(serializers.ModelSerializer):
             'quantidade_alunos',
             'professor',
             'alunos'
+        ]
+
+class AlunoTurmaSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='usuario.id', read_only=True)
+    nome = serializers.CharField(source='usuario.get_full_name', read_only=True)
+
+    class Meta:
+        model = Aluno
+        fields = ['id', 'nome', 'matricula']
+
+class EquipeSerializer(serializers.ModelSerializer):
+    # Listar os integrantes da equipe
+    integrantes = AlunoTurmaSerializer(source='alunos', many=True, read_only=True)
+
+    class Meta:
+        model = Equipe
+        fields = [
+            'id',
+            'nome',
+            'integrantes'
         ]
