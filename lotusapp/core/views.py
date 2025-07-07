@@ -5,13 +5,13 @@ from django.http import Http404, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Aluno, CasoClinico, Diagnostico, Professor, Turma, Usuario
+from .models import Aluno, CasoClinico, Diagnostico, Professor, Turma, Usuario, Equipe
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import TurmaSerializer
+from .serializers import TurmaSerializer, EquipeSerializer
 
 @csrf_exempt
 @require_http_methods(['POST'])
@@ -260,3 +260,20 @@ def info_turmas(request, id):
             {'erro': 'Turma não encontrada.'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def listar_equipes_da_turma(request, turma_id):
+    equipes = Equipe.objects.filter(
+        turma_id=turma_id
+    ).prefetch_related(
+        'alunos__usuario'
+    )
+
+    if not equipes.exists():
+        # turma não ter equipes, retorna uma lista vazia.
+        return Response([], status=status.HTTP_200_OK)
+
+    serializer = EquipeSerializer(equipes, many=True)
+    
+    return Response(serializer.data)
