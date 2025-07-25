@@ -21,3 +21,10 @@ sqlparse==0.5.2
 tomli==2.2.1
 typing_extensions==4.13.2
 tzdata==2025.2
+
+# --- Adições para o sistema de upload ---
+pillow # Para processamento de imagem/arquivo
+python-magic # Para validação segura de tipo MIME 
+# Se você estiver no Windows, pode ser necessário instalar python-magic-bin em vez de python-magic
+django-filter # Para habilitar filtros na API de listagem
+drf-spectacular # Para geração automática de documentação (Swagger/OpenAPI)
