@@ -109,21 +109,23 @@ class AlunoTurmaSerializer(serializers.ModelSerializer):
         model = Aluno
         fields = ['id', 'nome', 'matricula']
 
+class AlunoSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='usuario.id', read_only=True)
+    nome = serializers.CharField(source='usuario.get_full_name', read_only=True)
+    email = serializers.EmailField(source='usuario.email', read_only=True)
+
+    class Meta:
+        model = Aluno
+        fields = ['id', 'nome', 'email', 'matricula']
+
 class TurmaSerializer(serializers.ModelSerializer):
-    professor = serializers.CharField(source='professor_responsavel.usuario.get_full_name', read_only=True)
-    alunos = AlunoTurmaSerializer(source='alunos_matriculados', many=True, read_only=True)
+    professor = serializers.StringRelatedField(source='professor_responsavel.usuario.get_full_name')
+    alunos = AlunoSerializer(many=True, read_only=True, source='alunos_matriculados')
 
     class Meta:
         model = Turma
-        fields = [
-            'id',
-            'disciplina',
-            'semestre',
-            'capacidade_maxima',
-            'quantidade_alunos',
-            'professor',
-            'alunos'
-        ]
+        fields = ['id', 'disciplina', 'semestre', 'capacidade_maxima', 'quantidade_alunos', 'professor', 'alunos']
+
 
 class AlunoTurmaSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='usuario.id', read_only=True)
@@ -133,14 +135,17 @@ class AlunoTurmaSerializer(serializers.ModelSerializer):
         model = Aluno
         fields = ['id', 'nome', 'matricula']
 
+class IntegranteSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='usuario.id', read_only=True)
+    nome = serializers.CharField(source='usuario.get_full_name', read_only=True)
+    
+    class Meta:
+        model = Aluno
+        fields = ['id', 'nome', 'matricula']
+        
 class EquipeSerializer(serializers.ModelSerializer):
-    # Listar os integrantes da equipe
-    integrantes = AlunoTurmaSerializer(source='alunos', many=True, read_only=True)
-
+    integrantes = IntegranteSerializer(many=True, source='alunos')
+    
     class Meta:
         model = Equipe
-        fields = [
-            'id',
-            'nome',
-            'integrantes'
-        ]
+        fields = ['id', 'nome', 'integrantes']

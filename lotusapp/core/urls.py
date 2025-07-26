@@ -20,6 +20,7 @@ urlpatterns = [
     path('professores/<int:prof_id>/casos/<int:caso_id>', views.info_casos, name='info_casos'),
     path('turmas/<int:id>', views.info_turmas, name='info_turmas'),
     path('turmas/<int:turma_id>/equipes', views.listar_equipes_da_turma, name='listar_equipes_da_turma'),
+    path('turmas/<int:turma_id>/alunos', views.listar_alunos_da_turma, name='listar_alunos_da_turma'),
     # Endpoints para sistema de avaliação
     path('avaliacao/', include(avaliacao_router.urls)),
     # Endpoints específicos
