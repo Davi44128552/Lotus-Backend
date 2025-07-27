@@ -14,18 +14,20 @@ from .models import Aluno, CasoClinico, Diagnostico, Professor, Turma, Usuario, 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status, filters
 
+from rest_framework import status, filters
+from .serializers import TurmaSerializer, EquipeSerializer, AlunoSerializer, FileUploadSerializer, FileListSerializer
 # Adicionadas as Class-Based Views e Parsers para o upload
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
-
-# Adicionados os serializers da Turma, Equipe e os novos para Arquivos
-from .serializers import TurmaSerializer, EquipeSerializer, FileUploadSerializer, FileListSerializer
+from rest_framework import status
 
 # Configuração do Logger
 logger = logging.getLogger(__name__)
+
+
+
 
 @csrf_exempt
 @require_http_methods(['POST'])
@@ -185,14 +187,65 @@ def info_turmas(request, id):
     except Turma.DoesNotExist:
         return Response( {'erro': 'Turma não encontrada.'}, status=status.HTTP_404_NOT_FOUND )
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def listar_equipes_da_turma(request, turma_id):
-    equipes = Equipe.objects.filter( turma_id=turma_id ).prefetch_related( 'alunos__usuario' )
-    if not equipes.exists():
-        return Response([], status=status.HTTP_200_OK)
-    serializer = EquipeSerializer(equipes, many=True)
-    return Response(serializer.data)
+    if request.method == 'GET':
+        equipes = Equipe.objects.filter(
+            turma_id=turma_id
+        ).prefetch_related(
+            'alunos__usuario'
+        )
+
+        if not equipes.exists():
+            return Response([], status=status.HTTP_200_OK)
+
+        serializer = EquipeSerializer(equipes, many=True)
+        return Response(serializer.data)
+
+    if request.method == 'POST':
+        try:
+            turma = Turma.objects.get(pk=turma_id)
+        except Turma.DoesNotExist:
+            return Response({'erro': 'Turma não encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        nome_equipe = request.data.get('nome')
+        integrantes_ids = request.data.get('integrantes') 
+        if not nome_equipe or not isinstance(integrantes_ids, list):
+            return Response(
+                {'erro': 'O nome da equipe e uma lista de integrantes são obrigatórios.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        alunos_da_turma_ids = set(turma.alunos_matriculados.values_list('usuario_id', flat=True))
+        if not set(integrantes_ids).issubset(alunos_da_turma_ids):
+            return Response(
+                {'erro': 'Um ou mais alunos selecionados não pertencem a esta turma.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        nova_equipe = Equipe.objects.create(nome=nome_equipe, turma=turma)
+        nova_equipe.alunos.set(integrantes_ids)
+        nova_equipe.save()
+
+        serializer = EquipeSerializer(nova_equipe)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def listar_alunos_da_turma(request, turma_id):
+    try:
+        turma = Turma.objects.get(id=turma_id)
+        alunos = turma.alunos_matriculados.select_related('usuario').all()
+        
+        serializer = AlunoSerializer(alunos, many=True)
+        return Response(serializer.data)
+        
+    except Turma.DoesNotExist:
+        return Response(
+            {'erro': 'Turma não encontrada.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 # Views para o Sistema de Upload de Arquivos
 
