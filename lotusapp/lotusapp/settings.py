@@ -30,7 +30,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'localhost', '10.0.2.2', '192.168.3.61']
+ALLOWED_HOSTS = ['*']
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
@@ -172,3 +172,5 @@ SIMPLE_JWT = {
 
     "JTI_CLAIM": "jti",
 }
+
+CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app', 'https://*.trycloudflare.com']
