@@ -1,4 +1,5 @@
-from django.contrib.auth.models import (  # Classe de usuário abstrata do Django
+from django.conf import settings # Adicionado para referenciar o modelo de usuário customizado
+from django.contrib.auth.models import (
     AbstractUser,
     BaseUserManager,
 )
@@ -52,6 +53,61 @@ class Usuario(AbstractUser):
     objects = UsuarioManager()
 
 
+# Modelo para Categorias de arquivos
+class Category(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        verbose_name_plural = "Categories"
+
+
+# Modelo para Tags de arquivos
+class Tag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+# Modelo principal para gerenciar os arquivos enviados
+class UploadedFile(models.Model):
+    # Informações básicas do arquivo
+    file = models.FileField(upload_to='uploads/%Y/%m/%d/')
+    original_filename = models.CharField(max_length=255)
+    file_size = models.PositiveIntegerField()
+    content_type = models.CharField(max_length=100)
+
+    # Metadados do arquivo
+    title = models.CharField(max_length=200, blank=True)
+    description = models.TextField(blank=True)
+    tags = models.ManyToManyField(Tag, blank=True)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Informações de controle e segurança
+    # Usa a configuração AUTH_USER_MODEL para referenciar seu modelo 'core.Usuario'
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_public = models.BooleanField(default=False)
+    file_hash = models.CharField(max_length=64, unique=True, help_text="SHA-256 hash of the file")
+    virus_scan_status = models.CharField(max_length=20, default='pending')
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        indexes = [
+            models.Index(fields=['uploaded_by', '-uploaded_at']),
+            models.Index(fields=['content_type']),
+            models.Index(fields=['file_hash']),
+        ]
+
+    def __str__(self):
+        return self.title or self.original_filename
+
+
 # Classe professor
 class Professor(models.Model):
     # Cria uma relação de perfil entre o usuário e o professor
@@ -87,10 +143,22 @@ class CasoClinico(models.Model):
     titulo = models.CharField(max_length=100)
     descricao = models.CharField(max_length=1000)
     area = models.CharField(max_length=100)
-    arquivos = JSONField(default=list)
+    
+    # O campo 'arquivos' foi substituído por uma relação ManyToManyField
+    # para um gerenciamento de arquivos mais robusto.
+    # arquivos = JSONField(default=list) # <--- CAMPO ANTIGO COMENTADO
+    
+    # --- NOVO CAMPO PARA ARQUIVOS ---
+    materiais_upload = models.ManyToManyField(
+        'UploadedFile',
+        blank=True,
+        related_name='casos_clinicos',
+        help_text="Anexe materiais e arquivos a este caso clínico."
+    )
+    
     professor_responsavel = models.ForeignKey(
         Professor,
-        on_delete=models.CASCADE,  # TODO: pensar se é deletado em cascata ou SET_NULL
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name='casos_clinicos_criados_pelo_professor',
@@ -151,14 +219,12 @@ class TentativaDiagnostico(models.Model):
 # Classe de notas
 class Notas(models.Model):
     valor = models.DecimalField(max_digits=3, decimal_places=1)
-
     equipe = models.ForeignKey(Equipe, on_delete=models.CASCADE)
 
 
 # ======================================
 # Modelos para sistema de avaliação TBL/PBL
 # ======================================
-
 
 class Exame(models.Model):
     TIPO_EXAME = [('TBL', 'TBL'), ('PBL', 'PBL')]
